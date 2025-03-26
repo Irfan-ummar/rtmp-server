@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV HLS Stream Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        .player-container {
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        video {
+            width: 100%;
+            max-height: 75vh;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stream-info {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CCTV HLS Stream Player</h1>
+            <p class="text-muted">Use this page to test HLS streams from the RTMP server</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="player-container">
+                    <video id="video" controls autoplay></video>
+                </div>
+                
+                <div class="stream-info">
+                    <h4>Stream Information</h4>
+                    <div id="stream-details">
+                        <p>No stream loaded</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="form-container">
+                    <h4>Load Stream</h4>
+                    <form id="stream-form">
+                        <div class="mb-3">
+                            <label for="streamId" class="form-label">Stream ID</label>
+                            <input type="text" class="form-control" id="streamId" placeholder="camera1">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Load Stream</button>
+                        <button type="button" class="btn btn-secondary" onclick="listStreams()">List Available Streams</button>
+                    </form>
+                </div>
+                
+                <div class="form-container">
+                    <h4>Available Streams</h4>
+                    <div id="streams-list">
+                        <p>Click "List Available Streams" to check available streams</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>CCTV Manager RTMP Server &copy; 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video');
+            const streamForm = document.getElementById('stream-form');
+            const streamDetails = document.getElementById('stream-details');
+            const streamsList = document.getElementById('streams-list');
+            
+            let hls = null;
+            
+            // Initialize HLS.js if supported
+            function initPlayer(streamUrl) {
+                if (hls) {
+                    hls.destroy();
+                }
+                
+                if (Hls.isSupported()) {
+                    hls = new Hls({
+                        debug: false,
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    
+                    hls.loadSource(streamUrl);
+                    hls.attachMedia(video);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        video.play();
+                        updateStreamInfo(streamUrl);
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) {
+                            streamDetails.innerHTML = `
+                                <div class="alert alert-danger">
+                                    <strong>Error:</strong> Failed to load stream. The stream may not exist or is not active.
+                                </div>
+                            `;
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // For Safari
+                    video.src = streamUrl;
+                    video.addEventListener('loadedmetadata', function() {
+                        video.play();
+                        updateStreamInfo(streamUrl);
+                    });
+                } else {
+                    streamDetails.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> Your browser does not support HLS playback.
+                        </div>
+                    `;
+                }
+            }
+            
+            // Update stream information
+            function updateStreamInfo(streamUrl) {
+                streamDetails.innerHTML = `
+                    <table class="table">
+                        <tr>
+                            <th>Stream URL:</th>
+                            <td><code>${streamUrl}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                        <tr>
+                            <th>Player:</th>
+                            <td>HLS.js ${Hls.version}</td>
+                        </tr>
+                    </table>
+                `;
+            }
+            
+            // Handle form submission
+            streamForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const streamId = document.getElementById('streamId').value.trim();
+                
+                if (streamId) {
+                    const streamUrl = `/hls/${streamId}/index.m3u8`;
+                    initPlayer(streamUrl);
+                }
+            });
+            
+            // List available streams by checking HLS directories
+            window.listStreams = function() {
+                streamsList.innerHTML = '<p>Checking available streams...</p>';
+                
+                fetch('/hls/')
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        }
+                        throw new Error('Network response was not ok');
+                    })
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const links = doc.querySelectorAll('a');
+                        
+                        let streamsHtml = '<ul class="list-group">';
+                        let streamsFound = 0;
+                        
+                        links.forEach(link => {
+                            const href = link.getAttribute('href');
+                            if (href && href !== '../' && !href.includes('index.m3u8')) {
+                                const streamId = href.replace('/', '');
+                                streamsHtml += `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${streamId}
+                                        <button class="btn btn-sm btn-primary" onclick="loadStream('${streamId}')">Play</button>
+                                    </li>
+                                `;
+                                streamsFound++;
+                            }
+                        });
+                        
+                        streamsHtml += '</ul>';
+                        
+                        if (streamsFound === 0) {
+                            streamsList.innerHTML = '<p>No active streams found</p>';
+                        } else {
+                            streamsList.innerHTML = streamsHtml;
+                        }
+                    })
+                    .catch(error => {
+                        streamsList.innerHTML = `
+                            <div class="alert alert-danger">
+                                Failed to list streams: ${error.message}
+                            </div>
+                        `;
+                    });
+            };
+            
+            // Load a stream when clicked from the list
+            window.loadStream = function(streamId) {
+                document.getElementById('streamId').value = streamId;
+                const streamUrl = `/hls/${streamId}/index.m3u8`;
+                initPlayer(streamUrl);
+            };
+        });
+    </script>
+</body>
+</html> 
