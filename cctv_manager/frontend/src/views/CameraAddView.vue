@@ -30,26 +30,37 @@
       </div>
       
       <div class="form-group">
-        <label for="rtsp_port">RTSP Port</label>
+        <label for="rtmp_port">RTMP Port</label>
         <input 
           type="number" 
-          id="rtsp_port" 
-          v-model="camera.rtsp_port" 
+          id="rtmp_port" 
+          v-model="camera.rtmp_port" 
           required
-          placeholder="e.g., 554"
+          placeholder="e.g., 1935"
           min="1"
           max="65535"
         >
       </div>
       
       <div class="form-group">
-        <label for="stream_path">Stream Path</label>
+        <label for="app_name">App Name</label>
         <input 
           type="text" 
-          id="stream_path" 
-          v-model="camera.stream_path" 
+          id="app_name" 
+          v-model="camera.app_name" 
           required
-          placeholder="e.g., /live"
+          placeholder="e.g., live"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="stream_id">Stream ID</label>
+        <input 
+          type="text" 
+          id="stream_id" 
+          v-model="camera.stream_id" 
+          required
+          placeholder="e.g., stream1"
         >
       </div>
       
@@ -87,8 +98,9 @@ export default {
     const camera = reactive({
       name: '',
       ip_address: '',
-      rtsp_port: 554,
-      stream_path: '/live',
+      rtmp_port: 1935,
+      app_name: 'live',
+      stream_id: '',
       active: false
     })
     

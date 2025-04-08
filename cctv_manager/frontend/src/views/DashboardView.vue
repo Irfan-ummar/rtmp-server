@@ -18,7 +18,7 @@
         </div>
         <div class="camera-details">
           <p><strong>IP:</strong> {{ camera.ip_address }}</p>
-          <p><strong>RTSP URL:</strong> {{ camera.rtsp_url }}</p>
+          <p><strong>RTMP URL:</strong> {{ camera.rtmp_url }}</p>
         </div>
         <div class="camera-actions">
           <router-link :to="`/cameras/${camera.id}`" class="btn btn-view">View</router-link>

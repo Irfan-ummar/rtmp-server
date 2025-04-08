@@ -17,9 +17,9 @@
         <div class="info-group">
           <h3>Camera Details</h3>
           <p><strong>IP Address:</strong> {{ camera.ip_address }}</p>
-          <p><strong>RTSP Port:</strong> {{ camera.rtsp_port }}</p>
-          <p><strong>Stream Path:</strong> {{ camera.stream_path }}</p>
-          <p><strong>RTSP URL:</strong> {{ camera.rtsp_url }}</p>
+          <p><strong>RTMP Port:</strong> {{ camera.rtmp_port }}</p>
+          <p><strong>App Name:</strong> {{ camera.app_name }}</p>
+          <p><strong>Stream ID:</strong> {{ camera.stream_id }}</p>
           <p><strong>RTMP URL:</strong> {{ camera.rtmp_url }}</p>
         </div>
         

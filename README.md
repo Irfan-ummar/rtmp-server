@@ -1,32 +1,32 @@
 # CCTV Camera Manager
 
-A complete solution for managing IP cameras and RTMP streams, with support for streaming, recording, and monitoring CCTV cameras.
+A complete solution for managing IP cameras with RTMP streams, with support for streaming, recording, and monitoring CCTV cameras.
 
 - Django backend with a REST API for camera management
-- Nginx with RTMP module for converting RTMP streams to HLS
-- FFmpeg for pulling RTSP streams from cameras and pushing to RTMP
+- Nginx with RTMP module for HLS conversion
 - Vue3 frontend that plays HLS streams using hls.js
 - Swagger/ReDoc API documentation
 
-- 📹 Real-time streaming of RTSP cameras via RTMP and HLS
+## Features
+- 📹 Direct RTMP streaming from IP cameras
 - 📊 Camera management dashboard
-- 🔄 Automatic stream conversions from RTSP to RTMP
+- 🔄 Automatic stream conversion from RTMP to HLS
 - 📱 Responsive UI for desktop and mobile viewing
 - 🎯 On-demand recording and playback
 - 🔒 Secure authentication
 - 🔄 Health monitoring of camera streams
 
 ```
-┌─────────────┐        ┌─────────────┐        ┌─────────────┐        ┌─────────────┐
-│   IP Camera  │        │    FFmpeg   │        │     Nginx   │        │ Vue Frontend│
-│  (RTSP src)  │───────▶│ RTSP→RTMP  │───────▶│ RTMP→HLS   │───────▶│  (HLS.js)   │
-└─────────────┘        └─────────────┘        └─────────────┘        └─────────────┘
-                               ▲                                            │
-                               │                                            │
-                               │          ┌─────────────┐                   │
-                               └──────────│Django Backend│◀──────────────────┘
-                                          │  REST API   │
-                                          └─────────────┘
+┌─────────────┐        ┌─────────────┐        ┌─────────────┐
+│   IP Camera  │        │     Nginx   │        │ Vue Frontend│
+│  (RTMP src)  │───────▶│ RTMP→HLS   │───────▶│  (HLS.js)   │
+└─────────────┘        └─────────────┘        └─────────────┘
+                               │                      │
+                               │                      │
+                               │    ┌─────────────┐   │
+                               └────│Django Backend│◀──┘
+                                    │  REST API   │
+                                    └─────────────┘
 ```
 
 The application consists of three main components:
@@ -73,15 +73,30 @@ docker-compose up -d
 
 1. Navigate to the dashboard
 2. Click "Add Camera" button
-3. Enter the RTSP URL of your camera (e.g., `rtsp://username:password@camera-ip:554/stream`)
-4. Provide a name and location for the camera
+3. Enter the camera details:
+   - Name: A descriptive name for the camera
+   - IP Address: The IP address of your camera
+   - RTMP Port: The RTMP port (default: 1935)
+   - App Name: The RTMP application name (e.g., 'live')
+   - Stream ID: The RTMP stream identifier
+4. Choose whether to start streaming immediately
 5. Save the camera
+
+The RTMP URL will be automatically constructed in the format:
+```
+rtmp://{ip_address}:{rtmp_port}/{app_name}/{stream_id}
+```
+
+For example:
+```
+rtmp://192.168.1.100:1935/live/stream1
+```
 
 ### Starting/Stopping Streams
 
 - To start streaming a camera, click the "Start" button
 - To stop a stream, click the "Stop" button
-- Use the "Restart" button to refresh the connection
+- Use the "Refresh" button to update the stream status
 
 ### Viewing Streams
 
@@ -120,7 +135,7 @@ If you encounter issues with the system, use the provided `check-services.sh` sc
 
 Common issues:
 
-- **Stream not starting**: Check the camera's RTSP URL and credentials
+- **Stream not starting**: Check the camera's RTMP URL and credentials
 - **Services not accessible**: Verify Docker is running and containers are up
 - **"Connection refused" errors**: Ensure all services are running (check with `docker ps`)
 

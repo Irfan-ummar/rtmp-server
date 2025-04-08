@@ -19,7 +19,7 @@ class CameraViewSet(viewsets.ModelViewSet):
     serializer_class = CameraSerializer
     
     @swagger_auto_schema(
-        operation_description="Start the RTSP to RTMP stream for a camera",
+        operation_description="Start streaming from the camera's RTMP URL",
         responses={
             200: openapi.Response(
                 description="Stream started successfully",
@@ -34,7 +34,7 @@ class CameraViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
-        """Start the RTSP to RTMP stream for a camera"""
+        """Start streaming from the camera's RTMP URL"""
         camera = self.get_object()
         success = start_stream(camera)
         
@@ -44,7 +44,7 @@ class CameraViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @swagger_auto_schema(
-        operation_description="Stop the RTSP to RTMP stream for a camera",
+        operation_description="Stop streaming from the camera's RTMP URL",
         responses={
             200: openapi.Response(
                 description="Stream stopped successfully",
@@ -59,7 +59,7 @@ class CameraViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['post'])
     def stop(self, request, pk=None):
-        """Stop the RTSP to RTMP stream for a camera"""
+        """Stop streaming from the camera's RTMP URL"""
         camera = self.get_object()
         success = stop_stream(camera)
         
@@ -69,7 +69,7 @@ class CameraViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @swagger_auto_schema(
-        operation_description="Restart the RTSP to RTMP stream for a camera",
+        operation_description="Restart streaming from the camera's RTMP URL",
         responses={
             200: openapi.Response(
                 description="Stream restarted successfully",
@@ -84,7 +84,7 @@ class CameraViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['post'])
     def restart(self, request, pk=None):
-        """Restart the RTSP to RTMP stream for a camera"""
+        """Restart streaming from the camera's RTMP URL"""
         camera = self.get_object()
         success = restart_stream(camera)
         
@@ -99,6 +99,23 @@ class RTMPCallbackView(viewsets.ViewSet):
     API endpoints for RTMP server callbacks
     """
     
+    def on_connect(self, request):
+        """
+        Callback from Nginx RTMP server when a client connects
+        """
+        try:
+            app = request.data.get('app', '')
+            name = request.data.get('name', '')
+            addr = request.data.get('addr', '')
+            
+            logger.info(f"RTMP connect - app: {app}, name: {name}, addr: {addr}")
+            
+            # Always return 200 to allow connection
+            return Response({'status': 'OK'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in on_connect callback: {e}")
+            return Response({'status': 'Error'}, status=status.HTTP_200_OK)
+
     def on_publish(self, request):
         """
         Callback from Nginx RTMP server when a stream starts publishing
@@ -106,8 +123,9 @@ class RTMPCallbackView(viewsets.ViewSet):
         try:
             stream_name = request.data.get('name', '')
             app = request.data.get('app', '')
+            addr = request.data.get('addr', '')
             
-            logger.info(f"Stream publish started - app: {app}, name: {stream_name}")
+            logger.info(f"Stream publish started - app: {app}, name: {stream_name}, addr: {addr}")
             
             # Try to find the camera by id (stream name)
             try:
@@ -120,14 +138,12 @@ class RTMPCallbackView(viewsets.ViewSet):
                 except Camera.DoesNotExist:
                     logger.warning(f"Camera with ID {camera_id} not found")
             except ValueError:
-                # Not a numeric camera ID
                 logger.warning(f"Non-numeric stream name: {stream_name}")
             
             # Always return 200 to allow publishing
             return Response({'status': 'OK'}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in on_publish callback: {e}")
-            # Always return 200 to allow publishing even in case of errors
             return Response({'status': 'Error'}, status=status.HTTP_200_OK)
     
     def on_publish_done(self, request):
@@ -137,8 +153,9 @@ class RTMPCallbackView(viewsets.ViewSet):
         try:
             stream_name = request.data.get('name', '')
             app = request.data.get('app', '')
+            addr = request.data.get('addr', '')
             
-            logger.info(f"Stream publish ended - app: {app}, name: {stream_name}")
+            logger.info(f"Stream publish ended - app: {app}, name: {stream_name}, addr: {addr}")
             
             # Try to find the camera by id (stream name)
             try:
@@ -151,10 +168,41 @@ class RTMPCallbackView(viewsets.ViewSet):
                 except Camera.DoesNotExist:
                     logger.warning(f"Camera with ID {camera_id} not found")
             except ValueError:
-                # Not a numeric camera ID
                 logger.warning(f"Non-numeric stream name: {stream_name}")
             
             return Response({'status': 'OK'}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in on_publish_done callback: {e}")
+            return Response({'status': 'Error'}, status=status.HTTP_200_OK)
+
+    def on_play(self, request):
+        """
+        Callback from Nginx RTMP server when a client starts playing a stream
+        """
+        try:
+            app = request.data.get('app', '')
+            name = request.data.get('name', '')
+            addr = request.data.get('addr', '')
+            
+            logger.info(f"Stream play started - app: {app}, name: {name}, addr: {addr}")
+            
+            return Response({'status': 'OK'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in on_play callback: {e}")
+            return Response({'status': 'Error'}, status=status.HTTP_200_OK)
+
+    def on_done(self, request):
+        """
+        Callback from Nginx RTMP server when a client stops playing
+        """
+        try:
+            app = request.data.get('app', '')
+            name = request.data.get('name', '')
+            addr = request.data.get('addr', '')
+            
+            logger.info(f"Stream done - app: {app}, name: {name}, addr: {addr}")
+            
+            return Response({'status': 'OK'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in on_done callback: {e}")
             return Response({'status': 'Error'}, status=status.HTTP_200_OK) 

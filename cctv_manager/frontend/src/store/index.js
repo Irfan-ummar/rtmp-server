@@ -21,6 +21,9 @@ export default createStore({
       state.currentCamera = camera
     },
     ADD_CAMERA(state, camera) {
+      if (!Array.isArray(state.cameras)) {
+        state.cameras = []
+      }
       if (camera) {
         state.cameras.push(camera)
       }
@@ -28,12 +31,21 @@ export default createStore({
     UPDATE_CAMERA(state, updatedCamera) {
       if (!updatedCamera) return
       
+      if (!Array.isArray(state.cameras)) {
+        state.cameras = []
+        return
+      }
+      
       const index = state.cameras.findIndex(c => c && c.id === updatedCamera.id)
       if (index !== -1) {
         state.cameras.splice(index, 1, updatedCamera)
       }
     },
     DELETE_CAMERA(state, cameraId) {
+      if (!Array.isArray(state.cameras)) {
+        state.cameras = []
+        return
+      }
       state.cameras = state.cameras.filter(c => c && c.id !== cameraId)
     },
     SET_LOADING(state, status) {
@@ -52,7 +64,7 @@ export default createStore({
       commit('CLEAR_ERROR')
       try {
         const response = await cameraService.getCameras()
-        if (response && response.data) {
+        if (response && response.data && Array.isArray(response.data)) {
           commit('SET_CAMERAS', response.data)
         } else {
           commit('SET_CAMERAS', [])
